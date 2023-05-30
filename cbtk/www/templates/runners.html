@@ -1,0 +1,19 @@
+{% for section in sections %}
+<div>
+    <h2 class="text-2xl font-bold">
+        <a name="{{ section.title }}">{{ section.title }}</a>
+    </h2>
+      <!--
+    <ul class="list-disc list-inside">
+    {% for record in section.records %}
+        <li>
+            {{ record.runner }}
+        </li>
+    {% endfor %}
+    </ul>
+      -->
+    <div class="mx-32">
+        <canvas class="by-runner-chart" data-index="{{ loop.index0 }}"></canvas>
+    </div>
+</div>
+{% endfor %}

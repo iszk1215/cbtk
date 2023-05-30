@@ -1,0 +1,60 @@
+{% for section in sections %}
+<div class="border rounded my-2 px-2">
+    <h2 class="text-2xl font-bold py-2">Benchmark results on {{ section.hostname }}</h2>
+  <div class="">
+    <span class="font-bold">Latest Run</span>: {{ section.latest_run_at }}
+  </div>
+
+  <div class="">
+    <span class="font-bold">Total benchmark runs</span>:
+    {{ section.num_runs }} (from {{ section.oldest_run_at }})
+  </div>
+
+  <div class="py-2">
+    <span class="font-bold text-lg">Charts</span>
+
+    <div>
+      <ul class="pl-4 list-inside list-disc">
+        <li><a href="timeline" class="text-blue-500 hover:underline hover:text-blue-800">Timeline Charts</a></li>
+        <li><a href="runners" class="text-blue-500 hover:underline hover:text-blue-800">Runners Charts</a></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="py-2">
+    <span class="font-bold text-lg">Average Speedup</span>
+    {% for table in section.tables %}
+    <div class="py-2">
+      <table class="table-auto border">
+        <caption class="text-left #font-bold">{{ table.caption }}</caption>
+        <thead>
+          <tr>
+            <th class="bg-slate-100 #align-bottom" rowspan=2>From</th>
+            <th class="border bg-slate-100" colspan={{ table.header | length }}>To</th>
+          </tr>
+          <tr>
+          {% for th in table.header %}
+            <th class="border bg-slate-100 px-2">{{ th }}</th>
+          {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+        {% for row in table.rows %}
+          <tr>
+            {% for td in row %}
+              {% if loop.index0 == 0 %}
+                <td class="border px-2">{{ td }}</td>
+              {% else %}
+                <td class="border text-right">{{ td }}</td>
+              {% endif %}
+            {% endfor %}
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      </div>
+    {% endfor %}
+  </div>
+
+</div>
+{% endfor %}

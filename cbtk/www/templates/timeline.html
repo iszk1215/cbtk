@@ -1,0 +1,36 @@
+{% for section in sections %}
+<div class="pt-2">
+  <h2 class="text-2xl font-bold">
+    <a name="{{section.title}}">{{ section.title }}</a>
+  </h2>
+
+  <div id="section-{{ loop.index0 }}">
+    <ul id="tabs" class="inline-flex pt-2 w-full border-b">
+    {% for subsec in section.children %}
+      {% if loop.index0 == 0 %}
+        <li class="px-4 border-l border-r border-t rounded-t bg-white -mb-px font-bold">
+          <a href="#" data-title="{{ subsec.title }}">{{ subsec.title }}</a>
+        </li>
+      {% else %}
+        <li class="px-4 rounded-t bg-white">
+          <a href="#" data-title="{{ subsec.title }}">{{ subsec.title }}</a>
+        </li>
+      {% endif %}
+    {% endfor %}
+    </ul>
+
+    <div id="tab-contents" class="border-l border-b border-r">
+    {% for subsec in section.children %}
+      <div id="tab-body-{{loop.index0}}" data-title="{{ subsec.title }}"
+        class="grid grid-cols-6 {{ subsec.hidden }}">
+        {% for chart in subsec.charts %}
+        <div>
+          <canvas class="timeline-chart" data-index="{{ chart.index }}"></canvas>
+        </div>
+        {% endfor %}
+      </div>
+    {% endfor %}
+    </div>
+  </div>
+</div>
+{% endfor %}
