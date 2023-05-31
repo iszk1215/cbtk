@@ -22,8 +22,9 @@ def load_file(filename):
         return Record(raw["metadata"], values)
 
     with open(filename) as f:
-        lst = json.load(f)
-        records += [make_records(raw) for raw in lst]
+        dic = json.load(f)
+        assert dic["version"] == 1
+        records += [make_records(raw) for raw in dic["records"]]
 
     return sort_by_run_at(records)
 
@@ -46,6 +47,10 @@ def load_result(config):
 def cmd_publish(args):
     if args.use_tags is not None:
         args.use_tags = args.use_tags.split(",")
+
+    if args.resource_dir is None:
+        import cbtk.www
+        args.resource_dir = cbtk.www.__path__[0]
 
     if args.runner_order is not None:
         args.runner_order = args.runner_order.split(",")
