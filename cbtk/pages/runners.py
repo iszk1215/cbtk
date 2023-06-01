@@ -91,11 +91,8 @@ def make_speedup_data(config, records):
 
 def make_chart_config_json(config, suites):
     chart_configs = []
-    for (suite, tags), records in suites.items():
-        title = suite
-        if tags:
-            title += f" ({tags})"
-        chart_configs += [make_chart_config(records, title)]
+    for suite, records in suites.items():
+        chart_configs += [make_chart_config(records, str(suite))]
 
     return json.dumps(chart_configs, indent=2)
 
@@ -103,15 +100,13 @@ def make_chart_config_json(config, suites):
 def make_html(maker, config, suites):
     Section = namedtuple("Section", ["title", "records"])
     sections = []
-    for (suite, tags), records in suites.items():
-        title = suite + (f"({tags})" if tags else "")
-        sections += [Section(title=title, records=records)]
+    for suite, records in suites.items():
+        sections += [Section(title=str(suite), records=records)]
 
     nav = maker.get_template("nav.html").render(sections=sections)
     contents = maker.get_template("runners.html").render(sections=sections)
 
     return {
-        "site_title": config.title,
         "title": "Runners",
         "nav": nav,
         "contents": contents,

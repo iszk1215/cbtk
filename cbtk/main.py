@@ -5,21 +5,50 @@ import os
 
 import jinja2
 
-from cbtk.core import Record
+from cbtk.core import Record, Runner, Version, Suite
+
+
+def tags_to_dict(raw, use=None):
+    if len(raw) == 0:
+        return {}
+
+    ret = {}
+    for s in raw.split(","):
+        k, v = s.split("=")
+        if use is None or k in use:
+            ret[k] = v
+    return ret
+
+
+def get_tags(raw, use=None):
+    return ",".join(f"{k}={v}" for k, v in tags_to_dict(raw, use=use).items())
 
 
 def sort_by_run_at(records):
     return sorted(records, key=lambda record: record.run_at)
 
 
-def load_file(filename):
+def load_file(filename, config):
     records = []
 
     def make_records(raw):
         values = {}
         for name, dur in raw["duration"].items():
             values[name] = {"duration": dur}
-        return Record(raw["metadata"], values)
+
+        metadata = raw["metadata"]
+        tags = get_tags(metadata["tags"], config.runner_tags)
+        runner = Runner(metadata["runner"], Version.parse(metadata["version"]),
+                        tags)
+
+        tags = get_tags(metadata["tags"], config.suite_tags)
+        suite = Suite(metadata["suite"], tags)
+
+        metadata["suite"] = suite
+        metadata["runner"] = runner
+        metadata.pop("version")
+
+        return Record(metadata, values)
 
     with open(filename) as f:
         dic = json.load(f)
@@ -29,24 +58,27 @@ def load_file(filename):
     return sort_by_run_at(records)
 
 
-def load_directory(directory):
+def load_directory(directory, config):
     filenames = glob.glob(os.path.join(directory, "**/*.json"), recursive=True)
     return sort_by_run_at(
-        sum([load_file(filename) for filename in filenames], []))
+        sum([load_file(filename, config) for filename in filenames], []))
 
 
-def load_result(config):
+def load_records(config):
     records = []
     if config.data_dir is not None:
-        records += load_directory(config.data_dir)
+        records += load_directory(config.data_dir, config)
     for filename in config.filenames:
-        records += load_file(filename)
+        records += load_file(filename, config)
     return records
 
 
 def cmd_publish(args):
-    if args.use_tags is not None:
-        args.use_tags = args.use_tags.split(",")
+    if args.suite_tags is not None:
+        args.suite_tags = args.suite_tags.split(",")
+
+    if args.runner_tags is not None:
+        args.runner_tags = args.runner_tags.split(",")
 
     if args.resource_dir is None:
         import cbtk.www
@@ -58,7 +90,7 @@ def cmd_publish(args):
     if args.runner_display_order is not None:
         args.runner_display_order = args.runner_display_order.split(",")
 
-    records = load_result(args)
+    records = load_records(args)
 
     # Since some pages does not hostname-aware, filter by a hostname.
     records = [r for r in records if r.hostname == args.hostname]
@@ -104,7 +136,8 @@ def main():
     publish_parser = subparsers.add_parser(name="publish",
                                            parents=[parent_parser],
                                            add_help=False)
-    publish_parser.add_argument("--use-tags", default=None)
+    publish_parser.add_argument("--suite-tags", default=None)
+    publish_parser.add_argument("--runner-tags", default=None)
     publish_parser.add_argument("-r", "--resource-dir", default=None)
     publish_parser.add_argument("-o", "--output", default="public")
     publish_parser.add_argument("-b", "--base-url", default="/")

@@ -58,7 +58,7 @@ def groupby_runner(records):
     return grouped
 
 
-# records with the same suite and tags
+# records with the same suite
 def make_speedup_matrix_for_suite(records, config):
     runner_records = groupby_runner(records)
 
@@ -80,18 +80,16 @@ def make_speedup_matrix_for_suite(records, config):
     return matrix
 
 
-def groupby_srvt(records, use_tags=None):
-    Key = namedtuple("Key", ["suite", "runner", "tags"])
+def groupby_srvt(records):
+    Key = namedtuple("Key", ["suite", "runner"])
 
     def key_func(record):
-        return Key(suite=record.suite,
-                   runner=record.runner,
-                   tags=record.get_tags(use_tags))
+        return Key(suite=record.suite, runner=record.runner)
 
     return groupby(records, key=key_func)
 
 
-def make_fastest_record(suite, runner, tags, records):
+def make_fastest_record(suite, runner, records):
     values = defaultdict(list)
     for record in records:
         for name, dur in record.get_values_by_metric("duration").items():
@@ -102,34 +100,29 @@ def make_fastest_record(suite, runner, tags, records):
         for name in values
     }
 
-    return Record(
-        {
-            "suite": suite,
-            "runner": runner,
-            "version": runner.version,
-            "tags": tags,
-        }, values)
+    return Record({
+        "suite": suite,
+        "runner": runner,
+    }, values)
 
 
-def groupby_fastest(records, use_tags):
-    grouped = groupby_srvt(records, use_tags)
+def groupby_fastest(records):
+    grouped = groupby_srvt(records)
 
     aggregated = {}
     for key in grouped:
-        aggregated[key] = make_fastest_record(key.suite, key.runner, key.tags,
+        aggregated[key] = make_fastest_record(key.suite, key.runner,
                                               grouped[key])
 
     return aggregated
 
 
 def make_speedup_matrices(records, config):
-    fastests = groupby_fastest(records, config.use_tags)
-
-    Key = namedtuple("Keys", ["suite", "tags"])
+    fastests = groupby_fastest(records)
 
     suites = defaultdict(list)
     for key, record in fastests.items():
-        suites[Key(key.suite, key.tags)] += [record]
+        suites[key.suite] += [record]
 
     return {
         key: make_speedup_matrix_for_suite(suites[key], config)

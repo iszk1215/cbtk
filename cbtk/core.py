@@ -6,9 +6,10 @@ import re
 
 class Runner:
 
-    def __init__(self, name, version: "Version"):
+    def __init__(self, name, version: "Version", tags=None):
         self.name = name
         self.version = version
+        self.tags = tags
 
     def __format__(self, spec):
         return f"{str(self):{spec}}"
@@ -17,7 +18,7 @@ class Runner:
         return f"{self.name}-{self.version}"
 
     def drop_dev_version(self):
-        return Runner(self.name, self.version.drop_dev())
+        return Runner(self.name, self.version.drop_dev(), self.tags)
 
     def is_older_patch(self, other):
         return (self.name == other.name
@@ -32,7 +33,28 @@ class Runner:
         return self.name == other.name and self.version == other.version
 
     def __hash__(self):
-        return hash((self.name, str(self.version)))
+        return hash((self.name, str(self.version), self.tags))
+
+
+class Suite:
+
+    def __init__(self, name, tags=None):
+        self.name = name
+        self.tags = tags
+
+    def __repr__(self):
+        if self.tags:
+            return f"{self.name}({self.tags})"
+        return self.name
+
+    def __eq__(self, other):
+        return self.name == other.name and self.tags == other.tags
+
+    def __hash__(self):
+        return hash((self.name, self.tags))
+
+    def __lt__(self, other):
+        return self.name < other.name
 
 
 class Version:
@@ -109,13 +131,9 @@ class Record:
         self._metadata = metadata
         self._values = values
 
-        if isinstance(self._metadata["version"], str):
-            self._metadata["version"] = Version.parse(
-                self._metadata["version"])
-
-        if isinstance(self._metadata["runner"], str):
-            self._metadata["runner"] = Runner(self._metadata["runner"],
-                                              self._metadata.pop("version"))
+        assert isinstance(self._metadata["suite"], Suite)
+        assert isinstance(self._metadata["runner"], Runner)
+        assert "version" not in metadata
 
         if ("run_at" in self._metadata
                 and isinstance(self._metadata["run_at"], str)):
@@ -128,21 +146,6 @@ class Record:
     def deepcopy(self):
         return Record(copy.deepcopy(self._metadata),
                       copy.deepcopy(self._values))
-
-    def tag_dict(self, *, use=None):
-        raw = self._metadata["tags"]
-        if len(raw) == 0:
-            return {}
-
-        ret = {}
-        for s in raw.split(","):
-            k, v = s.split("=")
-            if use is None or k in use:
-                ret[k] = v
-        return ret
-
-    def get_tags(self, use=None):
-        return ",".join(f"{k}={v}" for k, v in self.tag_dict(use=use).items())
 
     @property
     def benchmarks(self):

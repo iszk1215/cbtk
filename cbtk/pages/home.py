@@ -7,14 +7,14 @@ from cbtk.speedup import make_speedup_matrices, SpeedupMatrix
 
 def print_speedups(matrix):
     for suite in matrix:
-        suite_and_tag = suite.suite + (f"({suite.tags})" if suite.tags else "")
         runners = matrix[suite].runners()
         for r0 in runners:
             for r1 in runners:
                 record = matrix[suite].get(r0, r1)
                 speedups = record.get_values_by_metric("_speedup")
                 average = speedups["_average"]
-                print(f"{suite_and_tag:20} {r0:20} -> {r1:20}: {average:.3}")
+                print(
+                    f"{str(suite):20} {r0:20} -> {r1:20}: {average:.3}")
 
 
 def get_oldest(records):
@@ -33,10 +33,9 @@ def get_latest(records):
     return functools.reduce(cmp_run_at, records)
 
 
-def convert_to_table(key, matrix):
+def convert_to_table(suite, matrix):
     Table = namedtuple("Table", ["caption", "header", "rows"])
 
-    caption = key.suite + (f"({key.tags})" if key.tags else "")
     header = [f"{r.name}-{r.version}" for r in matrix.runners()]
 
     rows = []
@@ -48,7 +47,7 @@ def convert_to_table(key, matrix):
         ]
         rows += [row]
 
-    return Table(caption=caption, header=header, rows=rows)
+    return Table(caption=str(suite), header=header, rows=rows)
 
 
 def make_host_section(config, hostname, records, matrix):
@@ -73,7 +72,6 @@ def make_html(maker, config, sections):
     contents = home_template.render(sections=sections)
 
     data = {
-        "site_title": config.title,
         "title": "Home",
         "contents": contents,
     }

@@ -11,10 +11,10 @@ def make_sorter_by_runner(runner_orders=None):
             return keys[1]
         else:
             try:
-                runner_order = runner_orders.index(keys[1])
+                runner_order = runner_orders.index(keys[2])
             except ValueError:
                 runner_order = len(runner_orders)
-            return (keys.hostname, keys.suite, runner_order, keys.tags)
+            return (keys.hostname, keys.suite, runner_order)
 
     def sorter(records):
         return sorted(records, key=key)
@@ -22,13 +22,11 @@ def make_sorter_by_runner(runner_orders=None):
     return sorter
 
 
-def groupby_suite_runner(records, use_tags=None, sort_func=None):
-    Key = namedtuple("Key", ["hostname", "suite", "runner", "tags"])
+def groupby_suite_runner(records, sort_func=None):
+    Key = namedtuple("Key", ["hostname", "suite", "runner"])
 
     def key_func(record):
-        tags = record.tag_dict(use=use_tags)
-        tagKey = ",".join([f"{k}={v}" for k, v in tags.items()])
-        return Key(record.hostname, record.suite, record.runner.name, tagKey)
+        return Key(record.hostname, record.suite, record.runner.name)
 
     return groupby(records, key=key_func, sort_func=sort_func)
 
@@ -38,11 +36,13 @@ def to_timeline_data(records, metric):
     benchmarks = defaultdict(list)
     for record in records:
         durations = record.get_values_by_metric(metric)
+        version = str(record.runner.version)
         for name, value in durations.items():
             benchmarks[name] += [{
                 "x": record.run_at.isoformat(),
                 "y": value,
-                "version": str(record.runner.version),  # JSON serializable
+                "version": version,  # JSON serializable
+                "tags": record.runner.tags,
             }]
     return benchmarks
 
@@ -50,19 +50,19 @@ def to_timeline_data(records, metric):
 # records are sorted by run_at
 def make_timeline_data(records, config):
     sorter = make_sorter_by_runner(config.runner_display_order)
-    grouped = groupby_suite_runner(records, config.use_tags, sort_func=sorter)
+    grouped = groupby_suite_runner(records, sort_func=sorter)
 
     aggregated = {}
     for key, records in grouped.items():
         group_by_version = groupby(records,
-                                   key=lambda r: r.runner.version.drop_dev())
+                                   key=lambda r: r.runner.drop_dev_version())
 
         datasets_by_bench = defaultdict(list)
-        for version, records in group_by_version.items():
+        for runner, records in group_by_version.items():
             benchmarks = to_timeline_data(records, "duration")
             for bench, data in benchmarks.items():
                 datasets_by_bench[bench] += [{
-                    "label": str(version),
+                    "label": str(runner),
                     "data": data
                 }]
 
@@ -134,12 +134,12 @@ def make_chart_config_json(config, data):
 
 
 def make_chart_indices(data):
-    Key = namedtuple("Key", ["hostname", "suite", "tags"])
+    Key = namedtuple("Key", ["hostname", "suite"])
     dic = defaultdict(lambda: defaultdict(list))
     idx = 0
     for key, records in data.items():
         n = len(records)
-        k = Key(key.hostname, key.suite, key.tags)
+        k = Key(key.hostname, key.suite)
         dic[k][key.runner] += list(range(idx, idx + n))
         idx += n
     return dic
@@ -160,8 +160,7 @@ def make_timeline_sections(config, data):
             hidden = "" if i == 0 else "hidden"
             subsecs += [SubSection(title=runner, charts=charts, hidden=hidden)]
 
-        title = key.suite + (f"({key.tags})" if key.tags else "")
-        sections += [Section(title=title, children=subsecs)]
+        sections += [Section(title=str(key.suite), children=subsecs)]
 
     return sections
 
@@ -173,7 +172,6 @@ def make_html(maker, config, data):
     nav = maker.get_template("nav.html").render(sections=sections)
 
     return {
-        "site_title": config.title,
         "title": "Timeline",
         "nav": nav,
         "contents": contents,

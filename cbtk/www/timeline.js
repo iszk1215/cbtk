@@ -1,8 +1,13 @@
 import _data from "./data.json" assert {type: "json"};
 
 function makeTooltip(context) {
-  return [`${context.formattedValue}`, `(version: ${context.raw.version})`];
+  const tooltip = [`${context.formattedValue}`, `(version: ${context.raw.version})`]
+  if (context.raw.tags)
+    tooltip.push(`(tags: ${context.raw.tags})`)
+
+  return tooltip
 }
+
 
 function initTab(section) {
   const tabs = section.querySelectorAll("#tabs a");
