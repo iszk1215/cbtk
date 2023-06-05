@@ -1,6 +1,5 @@
 from collections import defaultdict
 import copy
-import dateutil.parser
 import re
 
 
@@ -10,6 +9,10 @@ class Runner:
         self.name = name
         self.version = version
         self.tags = tags
+
+    @classmethod
+    def from_dict(self, dic):
+        return Runner(dic["name"], Version.parse(dic["version"]), dic["tags"])
 
     def __format__(self, spec):
         return f"{str(self):{spec}}"
@@ -41,6 +44,10 @@ class Suite:
     def __init__(self, name, tags=None):
         self.name = name
         self.tags = tags
+
+    @classmethod
+    def from_dict(cls, dic):
+        return Suite(dic["name"], dic.get("tags"))
 
     def __repr__(self):
         if self.tags:
@@ -127,25 +134,26 @@ class Version:
 
 class Record:
 
-    def __init__(self, metadata, values):
-        self._metadata = metadata
+    def __init__(self,
+                 *,
+                 suite,
+                 runner,
+                 run_at=None,
+                 hostname=None,
+                 values=None):
+        self.suite = suite
+        self.runner = runner
+        self.run_at = run_at
+        self.hostname = hostname
         self._values = values
 
-        assert isinstance(self._metadata["suite"], Suite)
-        assert isinstance(self._metadata["runner"], Runner)
-        assert "version" not in metadata
-
-        if ("run_at" in self._metadata
-                and isinstance(self._metadata["run_at"], str)):
-            self._metadata["run_at"] = dateutil.parser.parse(
-                self._metadata["run_at"])
-
-    def __getattr__(self, key):
-        return self._metadata[key]
-
     def deepcopy(self):
-        return Record(copy.deepcopy(self._metadata),
-                      copy.deepcopy(self._values))
+        return Record(suite=Suite(self.suite.name, self.suite.tags),
+                      runner=Runner(self.runner.name, self.runner.version,
+                                    self.runner.tags),
+                      run_at=self.run_at,
+                      hostname=self.hostname,
+                      values=copy.deepcopy(self._values))
 
     @property
     def benchmarks(self):

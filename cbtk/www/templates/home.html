@@ -34,7 +34,7 @@
           </tr>
           <tr>
           {% for th in table.header %}
-            <th class="border bg-slate-100 px-2">{{ th }}</th>
+          <th class="border bg-slate-100 px-2">{{ th | join("<br>") | safe }}</th>
           {% endfor %}
           </tr>
         </thead>
@@ -43,7 +43,7 @@
           <tr>
             {% for td in row %}
               {% if loop.index0 == 0 %}
-                <td class="border px-2">{{ td }}</td>
+              <td class="border px-2">{{ td | join("<br>") | safe}}</td>
               {% else %}
                 <td class="border text-right">{{ td }}</td>
               {% endif %}

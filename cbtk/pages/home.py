@@ -36,11 +36,17 @@ def get_latest(records):
 def convert_to_table(suite, matrix):
     Table = namedtuple("Table", ["caption", "header", "rows"])
 
-    header = [f"{r.name}-{r.version}" for r in matrix.runners()]
+    def fmt_runner(runner):
+        name = [f"{runner.name}-{runner.version}"]
+        if runner.tags:
+            name += [f"({runner.tags})"]
+        return name
+
+    header = [fmt_runner(r) for r in matrix.runners()]
 
     rows = []
     for r0 in matrix.runners():
-        row = [f"{r0.name}-{r0.version}"]
+        row = [fmt_runner(r0)]
         row += [
             f"{matrix.get(r0, r1).value('_speedup', '_average'):.2f}"
             for r1 in matrix.runners()

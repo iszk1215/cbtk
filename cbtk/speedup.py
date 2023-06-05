@@ -100,10 +100,7 @@ def make_fastest_record(suite, runner, records):
         for name in values
     }
 
-    return Record({
-        "suite": suite,
-        "runner": runner,
-    }, values)
+    return Record(suite=suite, runner=runner, values=values)
 
 
 def groupby_fastest(records):
