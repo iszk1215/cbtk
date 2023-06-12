@@ -20,6 +20,12 @@ class Runner:
     def __repr__(self):
         return f"{self.name}-{self.version}"
 
+    @property
+    def longname(self):
+        if self.tags:
+            return f"{self.name}-{self.version}({self.tags})"
+        return f"{self.name}-{self.version}"
+
     def drop_dev_version(self):
         return Runner(self.name, self.version.drop_dev(), self.tags)
 

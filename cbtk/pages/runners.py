@@ -50,12 +50,12 @@ def make_chart_config(records, title):
         }
 
     datasets = []
-    for records in records:
+    for record in records:
         data = [
-            to_chart_data(bench, records.get_values_by_bench(bench))
-            for bench in records.benchmarks
+            to_chart_data(bench, record.get_values_by_bench(bench))
+            for bench in record.benchmarks
         ]
-        datasets += [{"label": f"{records.runner}", "data": data}]
+        datasets += [{"label": record.runner.longname, "data": data}]
 
     return {
         "type": "bar",

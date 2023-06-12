@@ -6,25 +6,7 @@ import os
 
 import jinja2
 
-from cbtk.core import Record, Runner, Suite, Version
-
-
-def tags_to_dict(raw, use=None):
-    if len(raw) == 0:
-        return {}
-
-    ret = {}
-    for s in raw.split(","):
-        k, v = s.split("=")
-        if use is None or k in use:
-            ret[k] = v
-    return ret
-
-
-def get_tags(raw, use=None):
-    if raw is None:
-        return None
-    return ",".join(f"{k}={v}" for k, v in tags_to_dict(raw, use=use).items())
+from cbtk.core import Record, Runner, Suite
 
 
 def sort_by_run_at(records):
@@ -52,7 +34,7 @@ def load_file(filename):
 
     with open(filename) as f:
         dic = json.load(f)
-        assert dic["version"] == 1
+        assert dic["version"] == "1.0.0"
         records += [make_records(raw) for raw in dic["records"]]
 
     return sort_by_run_at(records)
@@ -71,40 +53,6 @@ def load_records(config):
     for filename in config.filenames:
         records += load_file(filename)
     return records
-
-
-def make_record(suite_name: str,
-                runner_name: str,
-                runner_version: str,
-                hostname: str,
-                run_at: str,
-                durations: dict,
-                suite_tags=None,
-                runner_tags=None,
-                tags=None,
-                use_suite_tags=None,
-                use_runner_tags=None):
-    if len(durations) == 0:
-        raise RuntimeError("empty durations")
-
-    if suite_tags is None and use_suite_tags is not None:
-        suite_tags = get_tags(tags, use_suite_tags)
-
-    if runner_tags is None and use_runner_tags is not None:
-        runner_tags = get_tags(tags, use_runner_tags)
-
-    run_at = dateutil.parser.parse(run_at)
-
-    suite = Suite(suite_name, suite_tags)
-    runner = Runner(runner_name, Version.parse(runner_version), runner_tags)
-
-    values = {k: {"duration": v} for k, v in durations.items()}
-
-    return Runner(suite=suite,
-                  runner=runner,
-                  hostname=hostname,
-                  run_at=run_at,
-                  values=values)
 
 
 def record_to_dict(record):
@@ -131,7 +79,7 @@ def record_to_dict(record):
 def records_to_json(records):
     return json.dumps(
         {
-            "version": 1,
+            "version": "1.0.0",
             "records": [record_to_dict(r) for r in records]
         },
         indent=2)
@@ -208,6 +156,7 @@ def main():
     publish_parser.add_argument("--title", default="Benchmark")
     publish_parser.add_argument("--geomean", action="store_true")
     publish_parser.add_argument("--hostname", default=None, required=True)
+    publish_parser.add_argument("--ignore-tagged-runner", action="store_true")
     publish_parser.set_defaults(func=cmd_publish)
 
     args = parser.parse_args()

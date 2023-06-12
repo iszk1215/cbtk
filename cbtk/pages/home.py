@@ -14,7 +14,8 @@ def print_speedups(matrix):
                 speedups = record.get_values_by_metric("_speedup")
                 average = speedups["_average"]
                 print(
-                    f"{str(suite):20} {r0:20} -> {r1:20}: {average:.3}")
+                    f"{str(suite):20} {r0.longname:40} -> {r1.longname:40}: "
+                    f"{average:.3}")
 
 
 def get_oldest(records):
@@ -114,7 +115,7 @@ def make_page(maker, config, records):
     for hostname in groups:
         matrices = make_speedup_matrices(groups[hostname], config)
         matrices = {k: drop_patch(v) for k, v in matrices.items()}
-        # print_speedups(matrices)
+        print_speedups(matrices)
         section = make_host_section(config, hostname, groups[hostname],
                                     matrices)
         sections += [section]

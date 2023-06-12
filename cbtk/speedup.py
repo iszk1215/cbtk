@@ -60,19 +60,21 @@ def groupby_runner(records):
 
 # records with the same suite
 def make_speedup_matrix_for_suite(records, config):
-    runner_records = groupby_runner(records)
+    records_by_runner = groupby_runner(records)
 
-    new_runners = drop_old_dev_version(runner_records.keys())
-    runner_records = {r: runner_records[r] for r in new_runners}
+    new_runners = drop_old_dev_version(records_by_runner.keys())
+    if config.ignore_tagged_runner:
+        new_runners = [r for r in new_runners if not r.tags]
+    records_by_runner = {r: records_by_runner[r] for r in new_runners}
 
     matrix = SpeedupMatrix()
-    for r0 in runner_records:
-        assert len(runner_records[r0]) == 1
-        base_record = runner_records[r0][0]
+    for r0 in records_by_runner:
+        assert len(records_by_runner[r0]) == 1
+        base_record = records_by_runner[r0][0]
         base_durs = base_record.get_values_by_metric("duration")
-        for r1 in runner_records:
-            assert len(runner_records[r1]) == 1
-            target_record = runner_records[r1][0]
+        for r1 in records_by_runner:
+            assert len(records_by_runner[r1]) == 1
+            target_record = records_by_runner[r1][0]
             speedup_record = make_speedup_record(target_record, base_durs,
                                                  config.geomean)
             matrix.set(r0, r1, speedup_record)

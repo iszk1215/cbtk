@@ -11,10 +11,10 @@ $(TAILWIND_CLI):
 	curl -L $(TAILWIND_URL) -o $@
 	chmod 755 $@
 
-cbtk/www/output.css: input.css $(TAILWIND_CLI)
-	$(TAILWIND_CLI) -i $< -o $@ --minify
+cbtk/www/output.css: misc/input.css $(TAILWIND_CLI)
+	$(TAILWIND_CLI) -i $< -c misc/tailwind.config.js -o $@ --minify
 
-$(WHEEL): $(SOURCES)
+$(WHEEL): $(SOURCES) cbtk/www/output.css
 	poetry build
 
 test:
