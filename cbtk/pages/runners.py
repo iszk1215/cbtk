@@ -66,15 +66,26 @@ def make_chart_config(records, title):
     }
 
 
+def filter_latest_version(runners):
+    dic = defaultdict(dict)
+    runners = sorted(runners)
+    for r in runners:
+        dic[r.name][r.tags] = r
+
+    return sum([list(tmp.values()) for tmp in dic.values()], [])
+
+
+def find_runner_by_name(runners, name):
+    return next(filter(lambda r: r.name == name, runners), None)
+
+
 def get_latest_version(matrix, runner_order) -> Optional[List[Record]]:
-    latest_runners = {}
-    for r in sorted(matrix.runners()):
-        latest_runners[r.name] = r
+    latest_runners = filter_latest_version(matrix.runners())
 
     for name in runner_order:
-        runner = latest_runners.get(name)
+        runner = find_runner_by_name(latest_runners, name)
         if runner is not None:
-            return [matrix.get(runner, r) for r in latest_runners.values()]
+            return [matrix.get(runner, r) for r in latest_runners]
 
     return None
 
