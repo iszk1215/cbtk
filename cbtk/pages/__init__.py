@@ -36,6 +36,9 @@ class PageMaker:
         with open(path, "w") as f:
             f.write(contents)
 
+    def subpage(self, path):
+        return PageMaker(path, self.env, self.base_dir)
+
 
 def make_home_page(path, env, output_dir, configs, records):
     from cbtk.pages.home import make_page

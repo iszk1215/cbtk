@@ -1,74 +1,118 @@
 from collections import defaultdict, namedtuple
+from dataclasses import dataclass
 import json
 
-from cbtk.core import groupby
+from cbtk.core import groupby, Suite, Runner
+
+
+class TimelineSeries:
+
+    def __init__(self, hostname: str, suite: Suite, benchmark: str,
+                 runner: Runner, points: dict):
+        self.hostname = hostname
+        self.suite = suite
+        self.benchmark = benchmark
+        self.runner = runner
+        self.points = points
+
+    @property
+    def label(self):
+        return self.runner.longname
+
+
+class TimelineChart:
+
+    def __init__(self, suite, benchmark, runner_name):
+        self.suite = suite
+        self.benchmark = benchmark
+        self.runner_name = runner_name
+        self.records = []
+
+    def add(self, record: TimelineSeries):
+        self.records += [record]
+
+    @property
+    def chart_id(self):
+        return f"{self.suite}/{self.runner_name}/{self.benchmark}"
+
+
+@dataclass
+class TimelineSingle:
+    title: str
 
 
 def make_sorter_by_runner(runner_orders=None):
 
-    def key(keys):
+    def key(runner_name):
         if runner_orders is None:
-            return keys[1]
+            return runner_name
         else:
             try:
-                runner_order = runner_orders.index(keys[2])
+                runner_order = runner_orders.index(runner_name)
             except ValueError:
                 runner_order = len(runner_orders)
-            return (keys.hostname, keys.suite, runner_order)
+            return (runner_order, runner_name)
 
-    def sorter(records):
-        return sorted(records, key=key)
+    def sorter(runner_names):
+        return sorted(runner_names, key=key)
 
     return sorter
 
 
-def groupby_suite_runner(records, sort_func=None):
-    Key = namedtuple("Key", ["hostname", "suite", "runner"])
-
-    def key_func(record):
-        return Key(record.hostname, record.suite, record.runner.name)
-
-    return groupby(records, key=key_func, sort_func=sort_func)
-
-
 # Unstack by bench
-def to_timeline_data(records, metric):
-    benchmarks = defaultdict(list)
+def make_timeline_points(records, metric):
+    points = defaultdict(list)
     for record in records:
         durations = record.get_values_by_metric(metric)
         version = str(record.runner.version)
-        for name, value in durations.items():
-            benchmarks[name] += [{
+        for bench, value in durations.items():
+            # add data point
+            points[bench] += [{
                 "x": record.run_at.isoformat(),
                 "y": value,
                 "version": version,  # JSON serializable
                 "tags": record.runner.tags,
             }]
-    return benchmarks
+
+    return points
 
 
-# records are sorted by run_at
-def make_timeline_data(records, config):
-    sorter = make_sorter_by_runner(config.runner_display_order)
-    grouped = groupby_suite_runner(records, sort_func=sorter)
+def make_timeline_series(records):
+    Key = namedtuple("Key", ["hostname", "suite", "runner"])
+    g = groupby(
+        records,
+        key=lambda r: Key(r.hostname, r.suite, r.runner.drop_dev_version()))
 
-    aggregated = {}
-    for key, records in grouped.items():
-        group_by_version = groupby(records,
-                                   key=lambda r: r.runner.drop_dev_version())
+    series = []
+    for key, records in g.items():
+        points = make_timeline_points(records, "duration")
+        for bench, pts in points.items():
+            ser = TimelineSeries(key.hostname, key.suite, bench, key.runner,
+                                 pts)
+            series += [ser]
 
-        datasets_by_bench = defaultdict(list)
-        for runner, records in group_by_version.items():
-            benchmarks = to_timeline_data(records, "duration")
-            for bench, data in benchmarks.items():
-                datasets_by_bench[bench] += [{
-                    "label": str(runner),
-                    "data": data
-                }]
+    return series
 
-        aggregated[key] = datasets_by_bench
 
-    return aggregated
+# input records are sorted by run_at
+def make_timeline_charts(records, config):
+    series = make_timeline_series(records)
+
+    # group by suite, benchmark and runner_name
+    Key = namedtuple("Key", ["suite", "benchmark", "runner_name"])
+    grouped = defaultdict(list)
+    for ser in series:
+        key = Key(ser.suite, ser.benchmark, ser.runner.name)
+        grouped[key] += [ser]
+
+    charts = []
+    for key in grouped:
+        chart = TimelineChart(key.suite, key.benchmark, key.runner_name)
+        for ser in grouped[key]:
+            chart.add(ser)
+        charts += [chart]
+
+    return charts
 
 
 def get_line_chart_options(title):
@@ -104,69 +148,70 @@ def get_line_chart_options(title):
                 "display": False,
             },
             "title": {
-                "display": True,
+                "display": False,
                 "text": title
             },
         }
     }
 
 
-def make_chart_config(title, label, datasets):
+def make_chart_config(chart: TimelineChart):
+    title = f"{chart.suite}.{chart.benchmark}"
+    ds = [{"label": ser.label, "data": ser.points} for ser in chart.records]
+
     return {
         "type": "line",
         "data": {
-            "datasets": datasets
+            "datasets": ds,
         },
         "options": get_line_chart_options(f"{title}")
     }
 
 
-def make_chart_config_json(config, data):
-    out = []
-    for key, datasets_by_bench in data.items():
-        configs = [
-            make_chart_config(f"{key.suite}.{bench}", bench, datasets)
-            for bench, datasets in datasets_by_bench.items()
-        ]
-        out += configs
-
-    return json.dumps(out, indent=2)
+def make_chart_config_json(config, charts):
+    return json.dumps({c.chart_id: make_chart_config(c)
+                       for c in charts},
+                      indent=2)
 
 
-def make_chart_indices(data):
-    Key = namedtuple("Key", ["hostname", "suite"])
-    dic = defaultdict(lambda: defaultdict(list))
-    idx = 0
-    for key, records in data.items():
-        n = len(records)
-        k = Key(key.hostname, key.suite)
-        dic[k][key.runner] += list(range(idx, idx + n))
-        idx += n
-    return dic
+def make_timeline_subsection(runner_name, charts):
+    SubSection = namedtuple("SubSection", ["title", "charts"])
+    Chart = namedtuple("Chart", ["title", "index"])
+    tmp = [
+        Chart(f"{c.suite}.{c.benchmark}", c.chart_id)
+        for c in charts
+    ]
+
+    return SubSection(title=runner_name, charts=tmp)
 
 
-def make_timeline_sections(config, data):
-    chart_indices = make_chart_indices(data)
+def make_timeline_section(config, suite, charts):
+    by_runner_names = defaultdict(list)
+    for chart in charts:
+        by_runner_names[chart.runner_name] += [chart]
+
+    sorter = make_sorter_by_runner(config.runner_display_order)
+    runner_names = sorter(by_runner_names.keys())
+
+    subsecs = [
+        make_timeline_subsection(name, by_runner_names[name])
+        for name in runner_names
+    ]
 
     Section = namedtuple("Section", ["title", "children"])
-    SubSection = namedtuple("SubSection", ["title", "charts", "hidden"])
-    Chart = namedtuple("Chart", ["index"])
-
-    sections = []
-    for key in chart_indices:
-        subsecs = []
-        for i, (runner, indices) in enumerate(chart_indices[key].items()):
-            charts = [Chart(index=j) for j in indices]
-            hidden = "" if i == 0 else "hidden"
-            subsecs += [SubSection(title=runner, charts=charts, hidden=hidden)]
-
-        sections += [Section(title=str(key.suite), children=subsecs)]
-
-    return sections
+    return Section(title=str(suite), children=subsecs)
 
 
-def make_html(maker, config, data):
-    sections = make_timeline_sections(config, data)
+def make_timeline_sections(config, charts):
+    by_suite = defaultdict(list)
+    for chart in charts:
+        by_suite[chart.suite] += [chart]
+
+    return [make_timeline_section(config, k, v) for k, v in by_suite.items()]
+
+
+def make_html(maker, config, charts):
+    sections = make_timeline_sections(config, charts)
 
     contents = maker.get_template("timeline.html").render(sections=sections)
     nav = maker.get_template("nav.html").render(sections=sections)
@@ -180,9 +225,25 @@ def make_html(maker, config, data):
     }
 
 
+def make_single(config, maker):
+    contents = maker.get_template("timeline/single.html").render()
+    page_data = {
+        "title": "Timeline1",
+        "contents": contents,
+        "script": "timeline-single.js",
+        "use_chart": True
+    }
+
+    maker.write("single.html", maker.render_page(config, **page_data))
+
+
 def make_page(maker, config, records):
-    data = make_timeline_data(records, config)
+    charts = make_timeline_charts(records, config)
+
+    make_single(config, maker)
+
     maker.copy_file(config, "timeline.js")
-    maker.write("data.json", make_chart_config_json(config, data))
+    maker.copy_file(config, "timeline-single.js")
+    maker.write("data.json", make_chart_config_json(config, charts))
     maker.write("index.html",
-                maker.render_page(config, **make_html(maker, config, data)))
+                maker.render_page(config, **make_html(maker, config, charts)))

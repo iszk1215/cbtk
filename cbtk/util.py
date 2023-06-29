@@ -31,7 +31,7 @@ def make_record(suite_name: str,
                 runner_tags=None,
                 tags=None,
                 use_suite_tags=None,
-                use_runner_tags=None):
+                use_runner_tags=None) -> Record:
     if len(durations) == 0:
         raise RuntimeError("empty durations")
 
@@ -41,7 +41,7 @@ def make_record(suite_name: str,
     if runner_tags is None and use_runner_tags is not None:
         runner_tags = filter_tags(tags, use_runner_tags)
 
-    run_at = dateutil.parser.parse(run_at)
+    run_at_ = dateutil.parser.parse(run_at)
 
     suite = Suite(suite_name, suite_tags)
     runner = Runner(runner_name, Version.parse(runner_version), runner_tags)
@@ -51,5 +51,5 @@ def make_record(suite_name: str,
     return Record(suite=suite,
                   runner=runner,
                   hostname=hostname,
-                  run_at=run_at,
+                  run_at=run_at_,
                   values=values)

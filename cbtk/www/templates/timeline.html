@@ -22,9 +22,10 @@
     <div id="tab-contents" class="border-l border-b border-r">
     {% for subsec in section.children %}
       <div id="tab-body-{{loop.index0}}" data-title="{{ subsec.title }}"
-        class="grid grid-cols-6 {{ subsec.hidden }}">
+        class="grid grid-cols-6 items-center justify-center {{ "" if loop.index0 == 0 else "hidden" }}">
         {% for chart in subsec.charts %}
-        <div>
+        <div class="text-center">
+          <a class="text-blue-500 hover:text-blue-800 hover:underline" href="single.html?index={{ chart.index }}">{{chart.title}}</a>
           <canvas class="timeline-chart" data-index="{{ chart.index }}"></canvas>
         </div>
         {% endfor %}
@@ -33,4 +34,5 @@
     </div>
   </div>
 </div>
+
 {% endfor %}
