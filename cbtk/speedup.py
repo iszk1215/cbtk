@@ -62,10 +62,8 @@ def groupby_runner(records):
 def make_speedup_matrix_for_suite(records, config):
     records_by_runner = groupby_runner(records)
 
-    new_runners = drop_old_dev_version(records_by_runner.keys())
-    if config.ignore_tagged_runner:
-        new_runners = [r for r in new_runners if not r.tags]
-    records_by_runner = {r: records_by_runner[r] for r in new_runners}
+    runners = drop_old_dev_version(records_by_runner.keys())
+    records_by_runner = {r: records_by_runner[r] for r in runners}
 
     matrix = SpeedupMatrix()
     for r0 in records_by_runner:

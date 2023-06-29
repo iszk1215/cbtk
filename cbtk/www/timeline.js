@@ -53,6 +53,9 @@ function init() {
           label: makeTooltip,
         },
       }
+      config.options.onClick = (e) => {
+        console.log(e)
+      }
       const chart = new Chart(elem, config);
       elem.chart = chart;
     }
