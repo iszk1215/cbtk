@@ -19,7 +19,7 @@ class PageMaker:
         dst = os.path.join(self.base_dir, dest_file or src_file)
         shutil.copy(src, dst)
 
-    def render_page(self, config, **kwargs):
+    def render(self, template_filename, config, **kwargs):
         extras = {
             "site_title": config.title,
             "base_url": config.base_url,
@@ -28,8 +28,22 @@ class PageMaker:
 
         extras.update(kwargs)
 
-        template = self.get_template("index.html")
+        template = self.get_template(template_filename)
         return template.render(**extras)
+
+
+    def render_page(self, config, **kwargs):
+        return self.render("index.html", config, **kwargs)
+        # extras = {
+        #     "site_title": config.title,
+        #     "base_url": config.base_url,
+        #     "generated_at": datetime.datetime.now().strftime("%c"),
+        # }
+
+        # extras.update(kwargs)
+
+        # template = self.get_template("index.html")
+        # return template.render(**extras)
 
     def write(self, filename, contents):
         path = os.path.join(self.base_dir, filename)

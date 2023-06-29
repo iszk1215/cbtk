@@ -1,10 +1,9 @@
-{% for section in sections %}
 <div class="pt-2">
   <h2 class="text-2xl font-bold">
     <a name="{{section.title}}">{{ section.title }}</a>
   </h2>
 
-  <div id="section-{{ loop.index0 }}">
+  <div id="section-0">
     <ul id="tabs" class="inline-flex pt-2 w-full border-b">
     {% for subsec in section.children %}
       {% if loop.index0 == 0 %}
@@ -34,5 +33,3 @@
     </div>
   </div>
 </div>
-
-{% endfor %}
