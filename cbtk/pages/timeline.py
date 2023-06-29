@@ -177,10 +177,7 @@ def make_chart_config_json(config, charts):
 def make_timeline_subsection(runner_name, charts):
     SubSection = namedtuple("SubSection", ["title", "charts"])
     Chart = namedtuple("Chart", ["title", "index"])
-    tmp = [
-        Chart(f"{c.suite}.{c.benchmark}", c.chart_id)
-        for c in charts
-    ]
+    tmp = [Chart(f"{c.suite}.{c.benchmark}", c.chart_id) for c in charts]
 
     return SubSection(title=runner_name, charts=tmp)
 
@@ -210,11 +207,11 @@ def make_timeline_sections(config, charts):
     return [make_timeline_section(config, k, v) for k, v in by_suite.items()]
 
 
-def make_html(maker, config, charts):
+def make_html(maker, config, charts, nav):
     sections = make_timeline_sections(config, charts)
 
     contents = maker.get_template("timeline.html").render(sections=sections)
-    nav = maker.get_template("nav.html").render(sections=sections)
+    #nav = maker.get_template("nav.html").render(sections=sections)
 
     return {
         "title": "Timeline",
@@ -228,7 +225,7 @@ def make_html(maker, config, charts):
 def make_single(config, maker):
     contents = maker.get_template("timeline/single.html").render()
     page_data = {
-        "title": "Timeline1",
+        "title": "Timeline",
         "contents": contents,
         "script": "timeline-single.js",
         "use_chart": True
@@ -237,13 +234,36 @@ def make_single(config, maker):
     maker.write("single.html", maker.render_page(config, **page_data))
 
 
-def make_page(maker, config, records):
-    charts = make_timeline_charts(records, config)
+def make_subpage(config, maker, section, charts, nav):
+    contents = maker.get_template("timeline/section.html").render(
+        section=section)
 
-    make_single(config, maker)
+    page_data = {
+        "title": "Timeline",
+        "nav": nav,
+        "contents": contents,
+        "script": "timeline.js",
+        "use_chart": True
+    }
 
     maker.copy_file(config, "timeline.js")
     maker.copy_file(config, "timeline-single.js")
     maker.write("data.json", make_chart_config_json(config, charts))
-    maker.write("index.html",
-                maker.render_page(config, **make_html(maker, config, charts)))
+    maker.write("index.html", maker.render_page(config, **page_data))
+
+    make_single(config, maker)
+
+
+def make_page(maker, config, records):
+    charts = make_timeline_charts(records, config)
+    sections = make_timeline_sections(config, charts)
+
+    NavSection = namedtuple("NavSection", ["path", "title"])
+    nav_sections = [
+        NavSection(str(i), section.title) for i, section in enumerate(sections)
+    ]
+    nav = maker.get_template("timeline/nav.html").render(sections=nav_sections)
+
+    for i, section in enumerate(sections):
+        sub = maker.subpage(str(i))
+        make_subpage(config, sub, section, charts, nav)
