@@ -262,7 +262,9 @@ def make_page(maker, config, records):
     nav_sections = [
         NavSection(str(i), section.title) for i, section in enumerate(sections)
     ]
-    nav = maker.get_template("timeline/nav.html").render(sections=nav_sections)
+    nav = maker.render("timeline/nav.html", config, sections=nav_sections)
+    # nav = maker.get_template("timeline/nav.html").render(sections=nav_sections,
+    #                                                      base_url=config.base_url)
 
     for i, section in enumerate(sections):
         sub = maker.subpage(str(i))
