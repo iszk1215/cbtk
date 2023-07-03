@@ -1,4 +1,6 @@
+<div id="page_nav">
 {% for section in sections %}
-<a href="{{ base_url }}/timeline/{{ section.path }}" class="text-blue-500 hover:text-blue-800 hover:underline">{{ section.title }} </a>
+<a href="#" class="text-blue-500 hover:text-blue-800 hover:underline" data-index="{{ loop.index0 }}">{{ section.title }}</a>
 {% endfor %}
+</div>
 

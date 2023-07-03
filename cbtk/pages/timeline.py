@@ -6,9 +6,14 @@ from cbtk.core import groupby, Suite, Runner
 
 
 class TimelineSeries:
-
-    def __init__(self, hostname: str, suite: Suite, benchmark: str,
-                 runner: Runner, points: dict):
+    def __init__(
+        self,
+        hostname: str,
+        suite: Suite,
+        benchmark: str,
+        runner: Runner,
+        points: dict,
+    ):
         self.hostname = hostname
         self.suite = suite
         self.benchmark = benchmark
@@ -21,7 +26,6 @@ class TimelineSeries:
 
 
 class TimelineChart:
-
     def __init__(self, suite, benchmark, runner_name):
         self.suite = suite
         self.benchmark = benchmark
@@ -36,13 +40,7 @@ class TimelineChart:
         return f"{self.suite}/{self.runner_name}/{self.benchmark}"
 
 
-@dataclass
-class TimelineSingle:
-    title: str
-
-
 def make_sorter_by_runner(runner_orders=None):
-
     def key(runner_name):
         if runner_orders is None:
             return runner_name
@@ -67,12 +65,14 @@ def make_timeline_points(records, metric):
         version = str(record.runner.version)
         for bench, value in durations.items():
             # add data point
-            points[bench] += [{
-                "x": record.run_at.isoformat(),
-                "y": value,
-                "version": version,  # JSON serializable
-                "tags": record.runner.tags,
-            }]
+            points[bench] += [
+                {
+                    "x": record.run_at.isoformat(),
+                    "y": value,
+                    "version": version,  # JSON serializable
+                    "tags": record.runner.tags,
+                }
+            ]
 
     return points
 
@@ -81,14 +81,16 @@ def make_timeline_series(records):
     Key = namedtuple("Key", ["hostname", "suite", "runner"])
     g = groupby(
         records,
-        key=lambda r: Key(r.hostname, r.suite, r.runner.drop_dev_version()))
+        key=lambda r: Key(r.hostname, r.suite, r.runner.drop_dev_version()),
+    )
 
     series = []
     for key, records in g.items():
         points = make_timeline_points(records, "duration")
         for bench, pts in points.items():
-            ser = TimelineSeries(key.hostname, key.suite, bench, key.runner,
-                                 pts)
+            ser = TimelineSeries(
+                key.hostname, key.suite, bench, key.runner, pts
+            )
             series += [ser]
 
     return series
@@ -132,26 +134,16 @@ def get_line_chart_options(title):
             "y": {
                 "type": "linear",
                 "beginAtZero": True,
-                "title": {
-                    "display": True,
-                    "text": "duration sec"
-                }
+                "title": {"display": True, "text": "duration sec"},
             },
         },
-        "datasets": {
-            "line": {
-                "borderWidth": 1
-            }
-        },
+        "datasets": {"line": {"borderWidth": 1}},
         "plugins": {
             "legend": {
                 "display": False,
             },
-            "title": {
-                "display": False,
-                "text": title
-            },
-        }
+            "title": {"display": False, "text": title},
+        },
     }
 
 
@@ -164,20 +156,23 @@ def make_chart_config(chart: TimelineChart):
         "data": {
             "datasets": ds,
         },
-        "options": get_line_chart_options(f"{title}")
+        "options": get_line_chart_options(f"{title}"),
     }
 
 
 def make_chart_config_json(config, charts):
-    return json.dumps({c.chart_id: make_chart_config(c)
-                       for c in charts},
-                      indent=2)
+    return json.dumps(
+        {c.chart_id: make_chart_config(c) for c in charts}, indent=2
+    )
 
 
 def make_timeline_subsection(runner_name, charts):
     SubSection = namedtuple("SubSection", ["title", "charts"])
-    Chart = namedtuple("Chart", ["title", "index"])
-    tmp = [Chart(f"{c.suite}.{c.benchmark}", c.chart_id) for c in charts]
+    Chart = namedtuple("Chart", ["title", "index", "benchmark"])
+    tmp = [
+        Chart(f"{c.suite}.{c.benchmark}", c.chart_id, c.benchmark)
+        for c in charts
+    ]
 
     return SubSection(title=runner_name, charts=tmp)
 
@@ -207,65 +202,25 @@ def make_timeline_sections(config, charts):
     return [make_timeline_section(config, k, v) for k, v in by_suite.items()]
 
 
-def make_html(maker, config, charts, nav):
-    sections = make_timeline_sections(config, charts)
-
-    contents = maker.get_template("timeline.html").render(sections=sections)
-    #nav = maker.get_template("nav.html").render(sections=sections)
-
-    return {
-        "title": "Timeline",
-        "nav": nav,
-        "contents": contents,
-        "script": "timeline.js",
-        "use_chart": True
-    }
-
-
-def make_single(config, maker):
-    contents = maker.get_template("timeline/single.html").render()
-    page_data = {
-        "title": "Timeline",
-        "contents": contents,
-        "script": "timeline-single.js",
-        "use_chart": True
-    }
-
-    maker.write("single.html", maker.render_page(config, **page_data))
-
-
-def make_subpage(config, maker, section, charts, nav):
-    contents = maker.get_template("timeline/section.html").render(
-        section=section)
+def make_main_page(config, maker, charts, sections):
+    contents = maker.render("timeline/main.html", config, sections=sections)
+    nav = maker.render("timeline/nav.html", config, sections=sections)
 
     page_data = {
         "title": "Timeline",
         "nav": nav,
         "contents": contents,
         "script": "timeline.js",
-        "use_chart": True
+        "use_chart": True,
     }
 
     maker.copy_file(config, "timeline.js")
-    maker.copy_file(config, "timeline-single.js")
     maker.write("data.json", make_chart_config_json(config, charts))
     maker.write("index.html", maker.render_page(config, **page_data))
-
-    make_single(config, maker)
 
 
 def make_page(maker, config, records):
     charts = make_timeline_charts(records, config)
     sections = make_timeline_sections(config, charts)
 
-    NavSection = namedtuple("NavSection", ["path", "title"])
-    nav_sections = [
-        NavSection(str(i), section.title) for i, section in enumerate(sections)
-    ]
-    nav = maker.render("timeline/nav.html", config, sections=nav_sections)
-    # nav = maker.get_template("timeline/nav.html").render(sections=nav_sections,
-    #                                                      base_url=config.base_url)
-
-    for i, section in enumerate(sections):
-        sub = maker.subpage(str(i))
-        make_subpage(config, sub, section, charts, nav)
+    make_main_page(config, maker, charts, sections)
