@@ -6,32 +6,27 @@
   </h2>
 
   <div class="cbtk-tab">
-    <ul class="tabs inline-flex pt-2 w-full border-b">
+    <ul class="nav-tabs inline-flex pt-2 w-full border-b">
     {% for subsec in section.children %}
-      {% if loop.index0 == 0 %}
-        <li class="px-4 border-l border-r border-t rounded-t bg-white -mb-px font-bold">
-          <a href="#" data-title="{{ subsec.title }}">{{ subsec.title }}</a>
-        </li>
-      {% else %}
-        <li class="px-4 rounded-t bg-white">
-          <a href="#" data-title="{{ subsec.title }}">{{ subsec.title }}</a>
-        </li>
-      {% endif %}
+      <li class="nav-item px-4 rounded-t bg-white">
+        <span
+           class="nav-link cursor-pointer"
+           data-title="{{ subsec.title }}">{{ subsec.title }}</span>
+      </li>
     {% endfor %}
     </ul>
 
     <div class="border-l border-b border-r">
 
       {% for subsec in section.children %}
-      <div data-title="{{ subsec.title }}"
-        class="tab-body {{ "" if loop.index0 == 0 else "hidden" }}">
+      <div class="tab-pane">
 
         <div class="single-multi-charts">
           <!-- single -->
           <div class="timeline-single hidden">
             <div class="text-center">
             <span class="timeline-single-title text-lg font-bold text-center"></span>
-            <a href="#" class="timeline-single-back px-2 text-blue-500 hover:text-blue-800 hover:underline">[back]</a>
+            <span class="timeline-single-back px-2 text-blue-500 hover:text-blue-800 hover:underline cursor-pointer">[back]</span>
             </div>
             <canvas class="timeline-single-canvas"></canvas>
           </div>
@@ -42,11 +37,12 @@
               {% for chart in subsec.charts %}
               <div class="text-center">
                 <a class="timeline-link-single text-blue-500 hover:text-blue-800 hover:underline"
-                  href="#"
-                  data-index="{{ chart.index }}"
-                  data-bench="{{ chart.benchmark }}"
-                  data-section="{{ section_index }}">{{chart.title}}</a>
-                <canvas class="timeline-chart" data-index="{{ chart.index }}"></canvas>
+                   href="#"
+                   data-index="{{ chart.index }}"
+                   data-bench="{{ chart.benchmark }}"
+                   data-section="{{ section_index }}">{{chart.title}}</a>
+                <canvas class="timeline-chart"
+                        data-index="{{ chart.index }}"></canvas>
               </div>
               {% endfor %}
             </div>

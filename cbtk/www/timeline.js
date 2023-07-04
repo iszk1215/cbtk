@@ -1,11 +1,22 @@
 import _data from "./data.json" assert {type: "json"};
 
-function makeTooltip(context) {
-  const tooltip = [`${context.formattedValue}`, `(version: ${context.raw.version})`]
-  if (context.raw.tags)
-    tooltip.push(`(tags: ${context.raw.tags})`)
+function addTooltip(configs) {
+  Object.keys(configs).forEach((key) => {
+    const config = configs[key];
+    config.options.plugins.tooltip = {
+      callbacks: {
+        label: (context) => {
+          const tooltip = [
+            `${context.formattedValue}`,
+            `(version: ${context.raw.version})`]
+          if (context.raw.tags)
+            tooltip.push(`(tags: ${context.raw.tags})`)
 
-  return tooltip
+          return tooltip
+        },
+      },
+    }
+  });
 }
 
 function initNav() {
@@ -35,28 +46,42 @@ function initNav() {
 function initTab(root) {
   const cls = ["border-l", "border-r", "border-t", "-mb-px", "font-bold"]
 
-  const tabs = root.querySelectorAll(".tabs a");
-  const bodies = root.querySelectorAll(".tab-body")
+  const navItems = root.querySelectorAll(".nav-item");
+  const panes = root.querySelectorAll(".tab-pane")
 
-  tabs.forEach((tab) => {
-    tab.addEventListener("click", (ev) => {
-      ev.preventDefault();
+  if (navItems.length != panes.length) {
+    console.log("number of nav-item is different from tab-panes");
+    return
+  }
 
-      tab.parentElement.classList.add(...cls);
+  navItems.forEach((item, i) => {
+    const pane = panes[i];
 
-      tabs.forEach((t, i) => {
-        if (t == tab) { // selected
-          if (i < bodies.length) {
-            bodies[i].classList.remove("hidden");
+    // enable first item and pane
+    if (i == 0) {
+      item.classList.add(...cls);
+      pane.classList.remove("hidden");
+    } else {
+      item.classList.remove(...cls);
+      pane.classList.add("hidden");
+    }
+
+    const link = item.querySelector(".nav-link")
+    if (link) {
+      link.addEventListener("click", (ev) => {
+        ev.preventDefault();
+
+        item.classList.add(...cls);
+        pane.classList.remove("hidden");
+
+        navItems.forEach((t, i) => {
+          if (t != item) {
+            t.classList.remove(...cls);
+            panes[i].classList.add("hidden");
           }
-        } else {
-          t.parentElement.classList.remove(...cls);
-          if (i < bodies.length) {
-            bodies[i].classList.add("hidden");
-          }
-        }
+        });
       });
-    });
+    }
   });
 }
 
@@ -70,12 +95,7 @@ function initCharts() {
   for (let elem of elements) {
     let config = _data[elem.dataset.index]
     if (config) {
-      config.options.plugins.tooltip = {
-        callbacks: {
-          label: makeTooltip,
-        },
-      }
-      const chart = new Chart(elem, config);
+      new Chart(elem, config);
     }
   }
 }
@@ -129,6 +149,8 @@ function initSingleMultiCharts() {
 }
 
 function init() {
+  addTooltip(_data);
+
   initNav();
   initTabs();
   initCharts();
