@@ -4,7 +4,6 @@ import re
 
 
 class Runner:
-
     def __init__(self, name, version: "Version", tags=None):
         self.name = name
         self.version = version
@@ -30,8 +29,9 @@ class Runner:
         return Runner(self.name, self.version.drop_dev(), self.tags)
 
     def is_older_patch(self, other):
-        return (self.name == other.name
-                and self.version.is_older_patch(other.version))
+        return self.name == other.name and self.version.is_older_patch(
+            other.version
+        )
 
     def __lt__(self, other):
         if self.name != other.name:
@@ -46,7 +46,6 @@ class Runner:
 
 
 class Suite:
-
     def __init__(self, name, tags=None):
         self.name = name
         self.tags = tags
@@ -71,7 +70,6 @@ class Suite:
 
 
 class Version:
-
     def __init__(self, major, minor, patch, dev=None, dist=None):
         self._version = (major, minor, patch, dev)
         self._dist = dist
@@ -110,8 +108,11 @@ class Version:
         """Return true if self has the same major and minor as other, and older
         than other
         """
-        return (self.major == other.major and self.minor == other.minor
-                and self < other)
+        return (
+            self.major == other.major
+            and self.minor == other.minor
+            and self < other
+        )
 
     def __eq__(self, other):
         return self._version == other._version
@@ -139,14 +140,9 @@ class Version:
 
 
 class Record:
-
-    def __init__(self,
-                 *,
-                 suite,
-                 runner,
-                 run_at=None,
-                 hostname=None,
-                 values=None):
+    def __init__(
+        self, *, suite, runner, run_at=None, hostname=None, values=None
+    ):
         self.suite = suite
         self.runner = runner
         self.run_at = run_at
@@ -154,12 +150,15 @@ class Record:
         self._values = values
 
     def deepcopy(self):
-        return Record(suite=Suite(self.suite.name, self.suite.tags),
-                      runner=Runner(self.runner.name, self.runner.version,
-                                    self.runner.tags),
-                      run_at=self.run_at,
-                      hostname=self.hostname,
-                      values=copy.deepcopy(self._values))
+        return Record(
+            suite=Suite(self.suite.name, self.suite.tags),
+            runner=Runner(
+                self.runner.name, self.runner.version, self.runner.tags
+            ),
+            run_at=self.run_at,
+            hostname=self.hostname,
+            values=copy.deepcopy(self._values),
+        )
 
     @property
     def benchmarks(self):

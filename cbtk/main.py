@@ -104,8 +104,11 @@ def cmd_publish(args):
 
     records = load_records(args)
 
-    # Since some pages does not hostname-aware, filter by a hostname.
+    # Since some pages are not hostname-aware, filter by a hostname.
     records = [r for r in records if r.hostname == args.hostname]
+
+    from cbtk.notify import notify
+    notify(records)
 
     env = jinja2.Environment(loader=jinja2.FileSystemLoader(
         os.path.join(args.resource_dir, "templates")),

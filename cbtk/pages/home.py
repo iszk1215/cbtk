@@ -115,7 +115,7 @@ def make_page(maker, config, records):
     for hostname in groups:
         matrices = make_speedup_matrices(groups[hostname], config)
         matrices = {k: drop_patch(v) for k, v in matrices.items()}
-        print_speedups(matrices)
+        # print_speedups(matrices)
         section = make_host_section(config, hostname, groups[hostname],
                                     matrices)
         sections += [section]
