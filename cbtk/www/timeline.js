@@ -124,10 +124,12 @@ function initSingleMultiChart(elem) {
 
       let config = _data[link.dataset.index];
       if (config) {
+        const callback = config.options.plugins.tooltip.callbacks.label
         // deep copy to edit
         config = JSON.parse(JSON.stringify(config));
         config.options.aspectRatio = 2.0
         config.options.plugins.legend.display = true
+        config.options.plugins.tooltip.callbacks.label = callback
 
         if ("chart" in singleDiv) {
           singleDiv.chart.destroy();
