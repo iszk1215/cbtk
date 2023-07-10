@@ -39,7 +39,11 @@ class Runner:
         return self.version < other.version
 
     def __eq__(self, other):
-        return self.name == other.name and self.version == other.version
+        return (
+            self.name == other.name
+            and self.version == other.version
+            and self.tags == other.tags
+        )
 
     def __hash__(self):
         return hash((self.name, str(self.version), self.tags))

@@ -6,7 +6,6 @@ from cbtk.core import Record, groupby, Runner
 
 
 class SpeedupMatrix:
-
     def __init__(self):
         self.dic = defaultdict(dict)
 
@@ -73,14 +72,15 @@ def make_speedup_matrix_for_suite(records, config):
         for r1 in records_by_runner:
             assert len(records_by_runner[r1]) == 1
             target_record = records_by_runner[r1][0]
-            speedup_record = make_speedup_record(target_record, base_durs,
-                                                 config.geomean)
+            speedup_record = make_speedup_record(
+                target_record, base_durs, config.geomean
+            )
             matrix.set(r0, r1, speedup_record)
 
     return matrix
 
 
-def groupby_srvt(records):
+def groupby_suite_and_runner(records):
     Key = namedtuple("Key", ["suite", "runner"])
 
     def key_func(record):
@@ -96,20 +96,20 @@ def make_fastest_record(suite, runner, records):
             values[name] += [{"run_at": record.run_at, "duration": dur}]
 
     values = {
-        name: min(values[name], key=lambda x: x["duration"])
-        for name in values
+        name: min(values[name], key=lambda x: x["duration"]) for name in values
     }
 
     return Record(suite=suite, runner=runner, values=values)
 
 
 def groupby_fastest(records):
-    grouped = groupby_srvt(records)
+    grouped = groupby_suite_and_runner(records)
 
     aggregated = {}
     for key in grouped:
-        aggregated[key] = make_fastest_record(key.suite, key.runner,
-                                              grouped[key])
+        aggregated[key] = make_fastest_record(
+            key.suite, key.runner, grouped[key]
+        )
 
     return aggregated
 
